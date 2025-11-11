@@ -2,21 +2,28 @@ import streamlit as st
 from gtts import gTTS
 from PIL import Image
 import numpy as np
-from scipy.io.wavfile import write
+import wave
+import struct
 import time
 import os
 
 st.set_page_config(page_title="Nolan Space Short", page_icon="🌌", layout="centered")
 
 # -------------------------------
-# Generate a soft ambient background tone
+# Generate a soft ambient background tone (no SciPy)
 # -------------------------------
 def generate_background_music(filename="background.wav", duration=60, freq=220):
     sample_rate = 44100
+    amplitude = 16000
     t = np.linspace(0, duration, int(sample_rate * duration))
-    wave = 0.3 * np.sin(2 * np.pi * freq * t)  # soft hum
-    stereo_wave = np.stack([wave, wave], axis=1)
-    write(filename, sample_rate, stereo_wave.astype(np.float32))
+    wave_data = amplitude * np.sin(2 * np.pi * freq * t)
+
+    with wave.open(filename, "w") as f:
+        f.setnchannels(1)  # mono
+        f.setsampwidth(2)  # 16-bit
+        f.setframerate(sample_rate)
+        for s in wave_data:
+            f.writeframes(struct.pack('<h', int(s)))
 
 if not os.path.exists("background.wav"):
     generate_background_music()
@@ -41,7 +48,6 @@ if not os.path.exists("narration.mp3"):
 # -------------------------------
 st.title("🌌 Christopher Nolan – Space Motivation Short")
 
-# Load images
 images = [
     "01_space_empty.png",
     "02_training.png",
@@ -50,7 +56,7 @@ images = [
     "05_nebula.png"
 ]
 
-# Combine both audio tracks in UI
+# Audio playback
 st.audio("background.wav")
 st.audio("narration.mp3")
 
