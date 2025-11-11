@@ -1,56 +1,57 @@
 import streamlit as st
-from PIL import Image
 from gtts import gTTS
+from PIL import Image
+import pygame
 import time
-import tempfile
-from pydub import AudioSegment
-from pydub.generators import Sine
+import os
 
-# ---------- PAGE SETUP ----------
-st.set_page_config(page_title="Echoes Beyond the Stars", layout="wide")
-st.title("🎬 Echoes Beyond the Stars — A Nolan-Inspired Space Short")
+# Initialize Pygame mixer for background sound
+pygame.mixer.init()
 
-# ---------- SCENES (PNG IMAGES) ----------
-scenes = [
-    {"file": "01_space_empty.png", "caption": "They told me space is empty… but they were wrong.", "duration": 5},
-    {"file": "02_training.png", "caption": "Out here, every breath is borrowed… every second, earned. But emptiness teaches purpose.", "duration": 8},
-    {"file": "03_sunrise.png", "caption": "When gravity no longer holds you… you realize — the only thing pulling you forward is your will.", "duration": 8},
-    {"file": "04_tear.png", "caption": "Dreams aren’t made on solid ground. They’re forged in the silence between stars.", "duration": 8},
-    {"file": "05_nebula.png", "caption": "If you ever feel lost in the dark… look up. The universe isn’t infinite — it’s inviting you to begin again.", "duration": 10}
+# Function to generate background tone dynamically
+def generate_background_music(duration=60):
+    freq = 220  # Base tone frequency
+    sample_rate = 44100
+    sound = pygame.sndarray.make_sound(
+        (4096 * pygame.surfarray.pixels3d(pygame.Surface((1, 1)))).astype('int16')
+    )
+    sound.play(-1)
+    time.sleep(duration)
+    sound.stop()
+
+# Voice narration text (Nolan-style)
+script_text = """
+They told me space is empty, but they were wrong.
+Out here, every breath is borrowed, every second earned.
+When gravity no longer holds you, you realize the only thing pulling you forward is your will.
+Dreams aren't made on solid ground. They're forged in the silence between stars.
+Keep going. Even the stars began in darkness.
+"""
+
+# Generate narration
+if not os.path.exists("narration.mp3"):
+    tts = gTTS(script_text)
+    tts.save("narration.mp3")
+
+# Streamlit UI
+st.title("🌌 Christopher Nolan - Space Motivation Short")
+
+# Load images in sequence
+images = [
+    "01_space_empty.png",
+    "02_training.png",
+    "03_sunrise.png",
+    "04_tear.png",
+    "05_nebula.png"
 ]
 
-# ---------- FUNCTION: GENERATE AMBIENT MUSIC ----------
-def generate_ambient_music(duration_ms=60000):
-    """Creates subtle Nolan-style ambient tones."""
-    base = Sine(220).to_audio_segment(duration=duration_ms).apply_gain(-20)
-    layer = Sine(440).to_audio_segment(duration=duration_ms).apply_gain(-25)
-    hum = Sine(110).to_audio_segment(duration=duration_ms).apply_gain(-30)
-    return base.overlay(layer).overlay(hum).fade_in(2000).fade_out(2000)
+# Play audio controls
+st.audio("narration.mp3")
 
-# Generate temporary ambient background
-music = generate_ambient_music(60000)
-temp_music = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-music.export(temp_music.name, format="mp3")
+# Display slideshow
+for img in images:
+    image = Image.open(img)
+    st.image(image, use_container_width=True)
+    time.sleep(3)
 
-# ---------- PLAY BACKGROUND MUSIC ----------
-st.audio(temp_music.name, format="audio/mp3")
-
-# ---------- SLIDESHOW ----------
-placeholder = st.empty()
-for scene in scenes:
-    # Display image
-    img = Image.open(scene["file"])
-    placeholder.image(img, use_container_width=True)
-
-    # Display caption
-    st.markdown(f"### _{scene['caption']}_")
-
-    # Generate and play narration
-    tts = gTTS(text=scene["caption"], lang='en', slow=False)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
-        tts.save(fp.name)
-        st.audio(fp.name, format="audio/mp3")
-        time.sleep(scene["duration"])
-
-# ---------- ENDING ----------
-st.markdown("### 🌌 *Keep going. Even the stars began in darkness.*")
+st.success("🚀 End of Nolan-inspired space short!")
